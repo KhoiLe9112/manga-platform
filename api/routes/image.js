@@ -46,24 +46,36 @@ router.get('/', async (req, res) => {
     }
   }
 
-  // Telegram Fallback (as final resort)
-  try {
-    const db = require('../../shared/db');
-    const imgRes = await db.query('SELECT telegram_file_id FROM chapter_images WHERE image_url = $1 LIMIT 1', [imageUrl]);
-    if (imgRes.rows[0]?.telegram_file_id && process.env.TELEGRAM_BOT_TOKEN) {
-      const fileId = imgRes.rows[0].telegram_file_id;
-      const pathRes = await axios.get(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`);
-      const filePath = pathRes.data.result.file_path;
-      const tgImg = await axios.get(`https://api.telegram.org/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${filePath}`, {
-        responseType: 'arraybuffer',
-        timeout: 20000
-      });
-      res.setHeader('Content-Type', tgImg.headers['content-type'] || 'image/jpeg');
-      return res.send(Buffer.from(tgImg.data));
+  // Telegram Fallback (Check both chapter_images and mangas table)
+    try {
+      const db = require('../../shared/db');
+      
+      // 1. Try chapter images (for chapter pages)
+      let fileRes = await db.query('SELECT telegram_file_id FROM chapter_images WHERE image_url = $1 LIMIT 1', [imageUrl]);
+      let fileId = fileRes.rows[0]?.telegram_file_id;
+
+      // 2. Try manga covers (for homepage/search)
+      if (!fileId) {
+        const mangaRes = await db.query('SELECT telegram_cover_id FROM mangas WHERE cover = $1 LIMIT 1', [imageUrl]);
+        fileId = mangaRes.rows[0]?.telegram_cover_id;
+      }
+      
+      if (fileId && process.env.TELEGRAM_BOT_TOKEN) {
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        const pathRes = await axios.get(`https://api.telegram.org/bot${botToken}/getFile?file_id=${fileId}`);
+        const filePath = pathRes.data.result.file_path;
+        
+        const tgImg = await axios.get(`https://api.telegram.org/file/bot${botToken}/${filePath}`, {
+          responseType: 'arraybuffer',
+          timeout: 20000
+        });
+        
+        res.setHeader('Content-Type', tgImg.headers['content-type'] || 'image/jpeg');
+        return res.send(Buffer.from(tgImg.data));
+      }
+    } catch (err3) {
+      logger.error(`[IMAGE_PROXY_FALLBACK] Failed all for ${imageUrl}: ${err3.message}`);
     }
-  } catch (tgErr) {
-    logger.error(`Final fallback fail: ${tgErr.message}`);
-  }
 
   res.status(500).json({ 
     error: 'Proxy Error', 

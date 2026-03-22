@@ -105,12 +105,45 @@ const worker = new Worker(QUEUE_NAME, async (job) => {
         }
       }
 
+      // Upload Cover to Telegram (bypass 403 for thumbnails)
+      let telegramCoverId = null;
+      if (process.env.TELEGRAM_BOT_TOKEN && detail.cover) {
+        try {
+          const coverRes = await axios.get(detail.cover, { 
+            responseType: 'arraybuffer', 
+            headers: { 'Referer': 'https://nettruyenviet1.com/' },
+            timeout: 30000 
+          });
+          const formData = new (require('form-data'))();
+          formData.append('chat_id', process.env.TELEGRAM_CHAT_ID);
+          formData.append('photo', Buffer.from(coverRes.data), { 
+            filename: `cover_${slug}.jpg`, 
+            contentType: 'image/jpeg' 
+          });
+          formData.append('caption', `COVER: ${detail.title} | Slug: ${slug}`);
+          formData.append('disable_notification', 'true');
+
+          const tgRes = await axios.post(
+            `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendPhoto`, 
+            formData, 
+            { headers: formData.getHeaders(), timeout: 60000 }
+          );
+          telegramCoverId = tgRes.data?.result?.photo?.slice(-1)[0]?.file_id;
+          if (telegramCoverId) logger.info(`Uploaded cover for ${detail.title} to TG`);
+        } catch (coverErr) {
+          logger.warn(`Failed to upload cover for ${detail.title} to TG: ${coverErr.message}`);
+        }
+      }
+
       const res = await db.query(
-        `INSERT INTO mangas (title, slug, author, description, cover, status, genres, source_url)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, updated_at = NOW()
+        `INSERT INTO mangas (title, slug, author, description, cover, status, genres, source_url, telegram_cover_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (slug) DO UPDATE SET 
+           title = EXCLUDED.title, 
+           updated_at = NOW(), 
+           telegram_cover_id = COALESCE(EXCLUDED.telegram_cover_id, mangas.telegram_cover_id)
          RETURNING id`,
-        [detail.title, slug, detail.author, detail.description, job.data.cover, detail.status, detail.genres, url]
+        [detail.title, slug, detail.author, detail.description, job.data.cover, detail.status, detail.genres, url, telegramCoverId]
       );
       
       const mangaId = res.rows[0].id;

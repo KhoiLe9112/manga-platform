@@ -18,6 +18,13 @@ const poolConfig = dbUrl
 
 const pool = new Pool(poolConfig);
 
+// Auto-migration for telegram_cover_id
+if (dbUrl) {
+  pool.query('ALTER TABLE mangas ADD COLUMN IF NOT EXISTS telegram_cover_id TEXT;').catch(err => {
+    console.warn('Auto-migration for telegram_cover_id failed (might be expected if already exists):', err.message);
+  });
+}
+
 module.exports = {
   query: (text, params) => pool.query(text, params),
   pool,
