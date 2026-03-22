@@ -7,7 +7,9 @@ const imageProxy = require('./routes/image');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const redisOptions = redisUrl.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {};
+const redis = new Redis(redisUrl, redisOptions);
 
 app.use(cors());
 app.use(express.json());
