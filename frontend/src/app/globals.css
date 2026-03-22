@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand: 37, 101, 250;
+    --background: 2, 6, 23;
+  }
+  
+  html, body {
+    @apply bg-slate-950 text-slate-100 antialiased selection:bg-brand-500 selection:text-white;
+    background-color: #020617 !important;
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-slate-900/40 backdrop-blur-xl border border-white/5;
+  }
+  
+  .premium-gradient-text {
+    @apply bg-gradient-to-r from-brand-400 via-purple-400 to-pink-500 bg-clip-text text-transparent;
+  }
+
+  .hover-glow {
+    @apply hover:shadow-[0_0_20px_rgba(37,101,250,0.3)] transition-all duration-300;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-slate-900;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-brand-600 rounded-full hover:bg-brand-500 transition-colors;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+}
+
+/* Base styles for the entire app */
+::selection {
+  background: #2565fa;
+  color: white;
+}
+
+img {
+  -webkit-user-drag: none;
+}

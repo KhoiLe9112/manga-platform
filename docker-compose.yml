@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: manga_db
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: 
+      context: .
+      dockerfile: ./api/Dockerfile
+    environment:
+      DB_HOST: db
+      DB_PASSWORD: password
+      REDIS_URL: redis://redis:6379
+      PORT: 4000
+      TZ: Asia/Ho_Chi_Minh
+      TELEGRAM_BOT_TOKEN: 8366511438:AAEo1Lp7ZWX8ftjxe4MG928Z4EysrMZRh2M
+      TELEGRAM_CHAT_ID: -1003677701701
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  crawler-dispatcher:
+    build:
+      context: .
+      dockerfile: ./crawler/Dockerfile
+    command: ["node", "crawler/dispatcher.js"]
+    environment:
+      REDIS_URL: redis://redis:6379
+      TZ: Asia/Ho_Chi_Minh
+    depends_on:
+      - redis
+
+  crawler-worker:
+    build:
+      context: .
+      dockerfile: ./crawler/Dockerfile
+    command: ["node", "crawler/worker.js"]
+    environment:
+      DB_HOST: db
+      DB_PASSWORD: password
+      REDIS_URL: redis://redis:6379
+      TZ: Asia/Ho_Chi_Minh
+      TELEGRAM_BOT_TOKEN: 8366511438:AAEo1Lp7ZWX8ftjxe4MG928Z4EysrMZRh2M
+      TELEGRAM_CHAT_ID: -1003677701701
+    deploy:
+      replicas: 1
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: ./scheduler/Dockerfile
+    environment:
+      DB_HOST: db
+      DB_PASSWORD: password
+      REDIS_URL: redis://redis:6379
+      TZ: Asia/Ho_Chi_Minh
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  bot:
+    build:
+      context: .
+      dockerfile: ./crawler/Dockerfile
+    command: ["node", "bot.js"]
+    environment:
+      DB_HOST: db
+      DB_PASSWORD: password
+      REDIS_URL: redis://redis:6379
+      TELEGRAM_BOT_TOKEN: 8366511438:AAEo1Lp7ZWX8ftjxe4MG928Z4EysrMZRh2M
+      FRONTEND_URL: http://localhost:3000
+      TZ: Asia/Ho_Chi_Minh
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
