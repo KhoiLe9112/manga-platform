@@ -38,8 +38,14 @@ export const getProxyImageUrl = (url) => {
   if (!url) return '';
   const fullUrl = url.startsWith('//') ? `https:${url}` : url;
 
-  // Always route through backend proxy (Render)
-  // Our backend proxy now has advanced bypassing and Telegram fallback/caching
+  // Cloudflare Worker as a caching shield (Closest to user)
+  const cfProxy = process.env.NEXT_PUBLIC_IMAGE_PROXY_URL;
+  if (cfProxy) {
+    // This CF Worker will now act as a cache layer for our Render Proxy
+    return `${cfProxy}${cfProxy.endsWith('/') ? '' : '/'}?url=${encodeURIComponent(fullUrl)}`;
+  }
+
+  // Fallback: Direct Render Proxy (Telegram lookup)
   return `${API_URL}/image?url=${encodeURIComponent(fullUrl)}`;
 };
 
