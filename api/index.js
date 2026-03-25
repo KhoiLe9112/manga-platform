@@ -192,6 +192,110 @@ app.get('/api/chapters/:id', cache(1800), async (req, res) => {
 
 app.use('/api/image', imageProxy);
 
+// ──────────────────────────────────────────────
+// Admin: Backfill Telegram Cover IDs
+// GET /api/admin/backfill-covers?secret=xxx&limit=50
+// ──────────────────────────────────────────────
+app.get('/api/admin/backfill-covers', async (req, res) => {
+  const ADMIN_SECRET = process.env.ADMIN_SECRET || 'manga-admin-2026';
+  if (req.query.secret !== ADMIN_SECRET) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+  const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+  if (!BOT_TOKEN || !CHAT_ID) {
+    return res.status(500).json({ error: 'Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID' });
+  }
+
+  const limit = parseInt(req.query.limit) || 30;
+  const axios = require('axios');
+  const FormData = require('form-data');
+
+  // Stream response so client doesn't timeout
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Transfer-Encoding', 'chunked');
+  res.flushHeaders();
+
+  const write = (msg) => { try { res.write(msg + '\n'); } catch(_) {} };
+
+  try {
+    const { rows } = await db.query(
+      `SELECT id, title, cover FROM mangas 
+       WHERE telegram_cover_id IS NULL AND cover IS NOT NULL 
+       ORDER BY updated_at DESC LIMIT $1`,
+      [limit]
+    );
+
+    write(`🔱 Found ${rows.length} mangas without Telegram cover (limit: ${limit})`);
+
+    const referers = [
+      'https://www.nettruyennew.com/',
+      'https://nettruyenviet1.com/',
+      'https://www.nettruyenmoi.com/',
+    ];
+
+    let success = 0, fail = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const manga = rows[i];
+      let imageBuffer = null;
+
+      for (const referer of referers) {
+        try {
+          const r = await axios.get(manga.cover, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+              'Referer': referer,
+              'Accept': 'image/*',
+            },
+            responseType: 'arraybuffer',
+            timeout: 20000,
+          });
+          if (r.status === 200) { imageBuffer = Buffer.from(r.data); break; }
+        } catch (_) {}
+      }
+
+      if (!imageBuffer) {
+        write(`❌ [${i+1}/${rows.length}] Download failed: ${manga.title}`);
+        fail++;
+        continue;
+      }
+
+      try {
+        const form = new FormData();
+        form.append('chat_id', CHAT_ID);
+        form.append('photo', imageBuffer, { filename: 'cover.jpg', contentType: 'image/jpeg' });
+
+        const tgRes = await axios.post(
+          `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`,
+          form,
+          { headers: form.getHeaders(), timeout: 30000 }
+        );
+
+        const photos = tgRes.data.result.photo;
+        const fileId = photos[photos.length - 1].file_id;
+        await db.query('UPDATE mangas SET telegram_cover_id = $1 WHERE id = $2', [fileId, manga.id]);
+
+        write(`✅ [${i+1}/${rows.length}] ${manga.title}`);
+        success++;
+      } catch (err) {
+        write(`❌ [${i+1}/${rows.length}] Telegram failed: ${manga.title} → ${err.message}`);
+        fail++;
+      }
+
+      // Small delay to avoid Telegram rate limit
+      await new Promise(r => setTimeout(r, 800));
+    }
+
+    write(`\n🏁 Done! Success: ${success} | Failed: ${fail}`);
+  } catch (err) {
+    write(`💥 Fatal: ${err.message}`);
+  }
+
+  res.end();
+});
+
 app.listen(PORT, () => {
   logger.info(`API Server running on port ${PORT}`);
 });
