@@ -91,15 +91,12 @@ router.get('/', async (req, res) => {
     logger.error(`[IMAGE_PROXY_FALLBACK] Failed all for ${imageUrl}: ${err3.message}`);
   }
 
-  try {
-    const placeholderUrl = 'https://placehold.jp/24/1a1a1a/ffffff/300x450.png?text=MANGA%20VISE%0AIMAGE%20NOT%20FOUND';
-    const pRes = await axios.get(placeholderUrl, { responseType: 'arraybuffer' });
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    return res.send(Buffer.from(pRes.data));
-  } catch (errPlaceholder) {
-    res.status(500).send('Proxy Error');
-  }
+  res.status(lastError?.response?.status || 500).json({ 
+    error: 'Proxy Error', 
+    message: lastError?.message,
+    status: lastError?.response?.status,
+    url: imageUrl
+  });
 });
 
 /**
