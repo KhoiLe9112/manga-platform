@@ -38,19 +38,9 @@ export const getProxyImageUrl = (url) => {
   if (!url) return '';
   const fullUrl = url.startsWith('//') ? `https:${url}` : url;
 
-  // kcgsbok.com: load directly from browser - real browsers are NOT blocked
-  // Server-side proxies (Render, Cloudflare, wsrv.nl) are blocked but browsers aren't
-  if (fullUrl.includes('kcgsbok.com')) {
-    return fullUrl;
-  }
-
-  // Cloudflare Worker for other image sources
-  const cfProxy = process.env.NEXT_PUBLIC_IMAGE_PROXY_URL;
-  if (cfProxy) {
-    return `${cfProxy}${cfProxy.endsWith('/') ? '' : '/'}?url=${encodeURIComponent(fullUrl)}`;
-  }
-
-  return `${API_URL}/image?url=${encodeURIComponent(url)}`;
+  // Always route through backend proxy (Render)
+  // Our backend proxy now has advanced bypassing and Telegram fallback/caching
+  return `${API_URL}/image?url=${encodeURIComponent(fullUrl)}`;
 };
 
 export const getSuggestions = async (q) => {
