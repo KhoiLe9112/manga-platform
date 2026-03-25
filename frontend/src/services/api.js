@@ -35,6 +35,13 @@ export const getChapterImages = async (id) => {
 };
 
 export const getProxyImageUrl = (url) => {
+  if (!url) return '';
+  const cfProxy = process.env.NEXT_PUBLIC_IMAGE_PROXY_URL;
+  if (cfProxy) {
+    // Ensure URL is complete and encoded
+    const fullUrl = url.startsWith('//') ? `https:${url}` : url;
+    return `${cfProxy}${cfProxy.endsWith('/') ? '' : '/'}?url=${encodeURIComponent(fullUrl)}`;
+  }
   return `${API_URL}/image?url=${encodeURIComponent(url)}`;
 };
 
