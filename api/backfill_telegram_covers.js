@@ -8,13 +8,23 @@ const axios = require('axios');
 const FormData = require('form-data');
 const { Pool } = require('pg');
 
+const args = process.argv.slice(2).reduce((acc, current, i, arr) => {
+  if (current.startsWith('--')) {
+    const key = current.slice(2).replace(/-/g, '_').toUpperCase();
+    acc[key] = arr[i + 1];
+  }
+  return acc;
+}, {});
+
+const DB_URL = args.DATABASE_URL || process.env.DATABASE_URL || process.env.DB_URL;
+const BOT_TOKEN = args.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+const CHAT_ID = args.TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.DB_URL,
+  connectionString: DB_URL,
   ssl: { rejectUnauthorized: false }
 });
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const DELAY_MS = 1500; // Tránh spam Telegram API
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
