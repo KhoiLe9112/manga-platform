@@ -119,7 +119,7 @@ export default function Home() {
                 </div>
                 
                 <div className="w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 relative">
-                  <img src={getProxyImageUrl(item.cover)} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                  <img src={getProxyImageUrl(item.cover)} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
                 </div>
                 <div className="flex-grow min-w-0">
                   <div className="text-xs font-bold text-slate-100 truncate mb-1">{item.title}</div>
@@ -147,6 +147,7 @@ export default function Home() {
               src={getProxyImageUrl(mangas[0].cover)} 
               className="absolute inset-0 w-full h-full object-cover grayscale-[0.2] group-hover:scale-105 transition-transform duration-[2s]"
               alt="Hero"
+              referrerPolicy="no-referrer"
             />
           )}
           <div className="relative z-20 h-full flex flex-col justify-center px-8 md:px-16 max-w-2xl space-y-4">
@@ -238,6 +239,7 @@ export default function Home() {
                   alt={manga.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   loading="lazy"
+                  referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 

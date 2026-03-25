@@ -187,6 +187,7 @@ export default function Header() {
                             src={getProxyImageUrl(manga.cover)} 
                             alt={manga.title} 
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            referrerPolicy="no-referrer"
                           />
                         </div>
                         <div className="flex-grow min-w-0">

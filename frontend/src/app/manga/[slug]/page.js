@@ -77,7 +77,7 @@ export default function MangaDetail() {
       {/* Dynamic Background Backdrop */}
       <div className="absolute top-0 inset-x-0 h-[60vh] overflow-hidden -z-20">
         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-3xl z-10"></div>
-        <img src={getProxyImageUrl(manga.cover)} className="w-full h-full object-cover scale-150 blur-3xl opacity-30" alt="Backdrop" />
+        <img src={getProxyImageUrl(manga.cover)} className="w-full h-full object-cover scale-150 blur-3xl opacity-30" alt="Backdrop" referrerPolicy="no-referrer" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -98,6 +98,7 @@ export default function MangaDetail() {
                 src={getProxyImageUrl(manga.cover)} 
                 alt={manga.title}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                referrerPolicy="no-referrer"
               />
               <div className="absolute top-4 left-4 flex gap-2">
                 <div className="bg-brand-500 text-white p-2 rounded-lg shadow-lg"><Star size={16} fill="white" /></div>

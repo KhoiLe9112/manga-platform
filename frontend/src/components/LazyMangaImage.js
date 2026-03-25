@@ -39,6 +39,7 @@ export default function LazyMangaImage({ src, alt, className }) {
           onLoad={() => setIsLoaded(true)}
           className={`w-full h-auto block transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
           loading="lazy"
+          referrerPolicy="no-referrer"
         />
       )}
       

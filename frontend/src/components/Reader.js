@@ -26,6 +26,7 @@ export default function Reader({ chapterId }) {
           alt={`Page ${img.page_number}`}
           loading="lazy"
           className="max-w-4xl w-full mb-2 shadow-2xl"
+          referrerPolicy="no-referrer"
         />
       ))}
     </div>
